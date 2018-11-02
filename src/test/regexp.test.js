@@ -1,4 +1,6 @@
 import {isArrayIndex, parseArrayIndex, parseArrayName} from "../regexp";
+import 'chai/register-should';
+import 'chai/register-expect';
 
 describe("isArrayIndex", () => {
 

@@ -66,6 +66,12 @@ describe("Lens#get", () => {
     expect(() => Lens(testObject).get("x.y.z")).to.throw(Error);
   });
 
+  it("throw error if path goes throw primitive", () => {
+    const testObject = {a: {b: {c: "d"}}};
+
+    expect(() => Lens(testObject).get("a.b.c.d")).to.throw(Error);
+  });
+
   it("return an object of specified path with index", () => {
     const expected = any.object();
     const testObject = {a: {b: {c: [expected]}}};
@@ -90,6 +96,61 @@ describe("Lens#get", () => {
     const testObject = {a: {b: {c: "d"}}};
 
     expect(() => Lens(testObject).get("a.b.c[0]")).to.throw(Error)
+  });
+
+});
+
+describe("Lens#set", () => {
+
+  it("return an object with a set value on specified path", () => {
+    const testObject = {a: {b: {c: "d"}}};
+    const expected = {a: {b: {c: "d", e: "f"}}};
+
+    const actual = Lens(testObject).set("a.b.e", "f").value();
+
+    actual.should.deep.equal(expected);
+  });
+
+  it("return an object with a set values on specified path", () => {
+    const testObject = {a: {b: {c: "d"}}};
+    const expected = {a: {b: {c: "d", e: "f", g: "h"}}};
+
+    const actual = Lens(testObject)
+      .set("a.b.e", "f")
+      .set("a.b.g", "h")
+      .value();
+
+    actual.should.deep.equal(expected);
+  });
+
+  it("return an object with a replaced value on specified path", () => {
+    const testObject = {a: {b: {c: "d"}}};
+    const expected = {a: {b: {c: "e"}}};
+
+    const actual = Lens(testObject).set("a.b.c", "e").value();
+
+    actual.should.deep.equal(expected);
+  });
+
+  it("return an object with a set array value on specified path", () => {
+    const testObject = {a: {b: {c: ["d"]}}};
+    const expected = {a: {b: {c: ["d", "e"]}}};
+
+    const actual = Lens(testObject).set("a.b.c", "e").value();
+
+    actual.should.deep.equal(expected);
+  });
+
+  it("throw error if path does not exist", () => {
+    const testObject = {a: {b: {c: "d"}}};
+
+    expect(() => Lens(testObject).set("x.y.z", "w")).to.throw(Error);
+  });
+
+  it("throw error if path goes throw primitive", () => {
+    const testObject = {a: {b: {c: "d"}}};
+
+    expect(() => Lens(testObject).set("a.b.c.d.e", "f")).to.throw(Error);
   });
 
 });

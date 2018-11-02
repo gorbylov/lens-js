@@ -3,33 +3,46 @@ import {copy, isArray, isDate, isObject} from "./utils";
 
 export const Lens = object => new Lenses(object);
 
+const getObjectByFieldName = (fieldName, object) => {
+  if (isArrayIndex(fieldName)) {
+    const arrayName = parseArrayName(fieldName);
+    const array = object[arrayName];
+    if (Array.isArray(array)) {
+      const index = parseArrayIndex(fieldName);
+      return array[index]
+    } else {
+      throw new LensError.expectedArray(path, this.object);
+    }
+  } else {
+    return object[fieldName];
+  }
+};
+
 class Lenses {
 
   constructor(object) {
     if (object === null) {
-      throw LensError.EXPECTED_OBJECT_ERROR("null");
+      throw LensError.expectedObject("null");
     } if (object === undefined) {
-      throw LensError.EXPECTED_OBJECT_ERROR("undefined");
+      throw LensError.expectedObject("undefined");
     } else if (isArray(object)) {
-      throw LensError.EXPECTED_OBJECT_ERROR("array");
+      throw LensError.expectedObject("array");
     } else if (isDate(object)) {
-      throw LensError.EXPECTED_OBJECT_ERROR("date");
+      throw LensError.expectedObject("date");
     } else if (!isObject(object)) {
-      throw LensError.EXPECTED_OBJECT_ERROR(typeof object);
+      throw LensError.expectedObject(typeof object);
     } else {
       this.object = copy(object);
     }
   };
 
   get = path => {
-
     const loop = (object, paths) => {
       const [pathHead, ...pathTail] = paths;
-
       const objectByFieldName = getObjectByFieldName(pathHead, object);
 
       if (pathTail.length > 0 && !isObject(objectByFieldName)) {
-        throw LensError.WRONG_PATH_ERROR(path, this.object);
+        throw LensError.wrongPath(path, this.object);
       } else if (pathTail.length > 0 && isObject(object)) {
         return loop(objectByFieldName, pathTail);
       } else {
@@ -37,22 +50,27 @@ class Lenses {
       }
     };
 
-    const getObjectByFieldName = (fieldName, object) => {
-      if (isArrayIndex(fieldName)) {
-        const arrayName = parseArrayName(fieldName);
-        const array = object[arrayName];
-        if (Array.isArray(array)) {
-          const index = parseArrayIndex(fieldName);
-          return array[index]
-        } else {
-          throw new LensError.EXPECTED_ARRAY_ERROR(path, this.object);
-        }
+    return loop(this.object, path.split("."));
+  };
+
+  set = (path, value) => {
+    const loop = (object, paths) => {
+      const [pathHead, ...pathTail] = paths;
+      const objectByFieldName = getObjectByFieldName(pathHead, object);
+
+      if (pathTail.length > 1 && !isObject(objectByFieldName)) {
+        throw LensError.wrongPath(path, this.object);
+      } else if (pathTail.length > 1 && isObject(object)) {
+        return {...object, [pathHead]: loop(objectByFieldName, pathTail)};
       } else {
-        return object[fieldName];
+        const keyToSet = pathTail[0];
+        const objectToSet = objectByFieldName[keyToSet];
+        const valueToSet = isArray(objectToSet) ? objectToSet.concat(value) : value;
+        return {...object, [pathHead]: {...objectByFieldName, [keyToSet]: valueToSet}};
       }
     };
 
-    return loop(this.object, path.split("."));
+    return Lens(loop(this.object, path.split(".")));
   };
 
   value = () => {
@@ -64,17 +82,19 @@ class Lenses {
 class LensError extends Error {
 
   static EXPECTED_OBJECT_ERROR_CODE = 1;
-  static EXPECTED_OBJECT_ERROR = actualType => new LensError(
+  static expectedObject = actualType => new LensError(
     `Expected an object, actual type: ${actualType}.`,
     LensError.EXPECTED_OBJECT_ERROR_CODE
   );
+
   static EXPECTED_ARRAY_ERROR_CODE = 2;
-  static EXPECTED_ARRAY_ERROR = (path, object) => new LensError(
+  static expectedArray = (path, object) => new LensError(
     `Expected an array for path ${path} of object ${JSON.stringify(object)}.`,
     LensError.EXPECTED_ARRAY_ERROR_CODE
   );
+
   static WRONG_PATH_ERROR_CODE = 3;
-  static WRONG_PATH_ERROR = (path, object) => new LensError(
+  static wrongPath = (path, object) => new LensError(
     `Path "${path}" does not exist for object: ${JSON.stringify(object)}.`,
     LensError.WRONG_PATH_ERROR_CODE
   );

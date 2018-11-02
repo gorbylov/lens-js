@@ -1,6 +1,7 @@
 import {copy} from "../utils";
 import any from "./any.test";
 import 'chai/register-should';
+import 'chai/register-expect';
 
 describe("copy", () => {
 
